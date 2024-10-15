@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        form {
+            background: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #4cae4c;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #fff;
+        }
+
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px; /* Space between buttons */
+        }
+
+        .delete-button{
+            background-color: #B03114;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .delete-button:hover {
+            background-color: #54180A;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Manager</h1>
+
+    <!-- Form to Add a New Task -->
+    <form id="task-form">
+        <input type="text" id="title" placeholder="Task Title" required><br>
+        <textarea id="description" placeholder="Task Description" required></textarea><br>
+        <label for="status">Status:</label>
+        <select id="status" required>
+            <option value="Pending">Pending</option>
+            <option value="Completed">Completed</option>
+        </select><br>
+        <button type="submit">Add Task</button>
+    </form>
+
+    <!-- Area to display all tasks in a table -->
+    <h2>All Tasks</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="task-list"></tbody>
+    </table>
+
+    <script>
+        let currentTaskId = null; // To keep track of the task being edited
+
+        // Function to fetch and display tasks
+        async function fetchTasks() {
+            const response = await fetch('http://127.0.0.1:8000/api/tasks/');
+            const tasks = await response.json();
+            const taskList = document.getElementById('task-list');
+            taskList.innerHTML = '';  // Clear the task list before re-populating
+
+            tasks.forEach(task => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${task.title}</td>
+                    <td>${task.description}</td>
+                    <td>${task.status}</td>
+                    <td class="action-buttons">
+                        <button onclick="editTask(${task.id}, '${task.title}', '${task.description}', '${task.status}')">Edit</button>
+                        <button class= "delete-button" onclick="deleteTask(${task.id})">Delete</button>
+
+                    </td>
+                `;
+                taskList.appendChild(row);
+            });
+        }
+
+        // Handle form submission for adding a new task
+        document.getElementById('task-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const status = document.getElementById('status').value; // Get the selected status
+
+            if (currentTaskId) {
+                // Update existing task
+                const response = await fetch(`http://127.0.0.1:8000/api/tasks/${currentTaskId}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        description: description,
+                        status: status  // Use the selected status
+                    })
+                });
+
+                if (response.ok) {
+                    currentTaskId = null;  // Reset the currentTaskId
+                    document.getElementById('task-form').reset();  // Reset the form
+                } else {
+                    alert('Error updating task');
+                }
+            } else {
+                // Create new task
+                const response = await fetch('http://127.0.0.1:8000/api/tasks/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        description: description,
+                        status: status  // Use the selected status
+                    })
+                });
+
+                if (response.ok) {
+                    document.getElementById('task-form').reset();  // Reset the form
+                } else {
+                    alert('Error adding task');
+                }
+            }
+            fetchTasks();  // Refresh the task list after adding/updating
+        });
+
+        // Edit a task
+        function editTask(id, title, description, status) {
+            currentTaskId = id;  // Set the current task ID
+            document.getElementById('title').value = title;
+            document.getElementById('description').value = description;
+            document.getElementById('status').value = status; // Set the selected status
+        }
+
+        // Delete a task
+        async function deleteTask(id) {
+            const response = await fetch(`http://127.0.0.1:8000/api/tasks/${id}/`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                fetchTasks();  // Refresh the task list after deletion
+            } else {
+                alert('Error deleting task');
+            }
+        }
+
+        // Fetch tasks when the page loads
+        fetchTasks();
+    </script>
+</body>
+</html>
