@@ -5,7 +5,7 @@ from .serializers import TaskSerializer
 
 # View to render the HTML page
 def index(request):
-    return render(request, 'index.html')  # Assumes index.html is in templates folder
+    return render(request, 'index.html')  
 
 # API ViewSet to perform CRUD operations on tasks
 class TaskViewSet(viewsets.ModelViewSet):
